@@ -1,0 +1,14 @@
+Pour reconstruir le docker
+docker compose up -d --build service-d
+
+Pour lancer tout ce gloubiboulga :
+```
+Fait gaffe à ce que docker (desktop) soit lancé.
+cd service/service-d-payement
+npm install
+```
+Pour essayer 
+Invoke-RestMethod -Uri "http://localhost:8084/payments/charge" -Method POST -ContentType "application/json" -Body '{"order_id": "order-123","amount_cents": 2500,"idempotency_key": "payment-test-001"}'
+
+Pour accéder au Grafana:
+http://localhost:3000/d/eg4huydzwqj9cf/dashboard-metrics
