@@ -16,7 +16,7 @@ datasources:
     url: http://jaeger:16686
     editable: false
     jsonData:
-      # Trace -> logs: from a span, open the Loki logs that carry the same trace_id
+      # 1-click : trace (Jaeger) -> logs of that trace (Loki)
       tracesToLogsV2:
         datasourceUid: loki
         spanStartTimeShift: '-5m'
@@ -31,7 +31,7 @@ datasources:
     url: http://loki:3100
     editable: false
     jsonData:
-      # Log -> trace: turn the trace_id field of each log into a link to Jaeger
+      # 1-click : log line (Loki) -> its trace (Jaeger)
       derivedFields:
         - name: TraceID
           matcherType: label

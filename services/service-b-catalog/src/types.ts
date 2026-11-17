@@ -34,3 +34,9 @@ export interface ErrorResponse {
   message: string;
   status_code: number;
 }
+
+/** What a route function returns: the HTTP status and the JSON body to send. */
+export interface RouteResult<T> {
+  status: number;
+  body: T | ErrorResponse;
+}
