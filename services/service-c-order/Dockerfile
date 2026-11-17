@@ -13,6 +13,7 @@ FROM node:24-alpine AS runner
 
 WORKDIR /app
 ENV NODE_ENV=production
+# OTEL_EXPORTER_OTLP_ENDPOINT is provided by docker-compose.yml
 
 COPY package.json ./
 RUN npm install --omit=dev
@@ -21,4 +22,5 @@ COPY --from=builder /app/dist ./dist
 
 EXPOSE 8083
 
-CMD ["node", "dist/server.js"]
+# Load OpenTelemetry (dist/instrumentation.js) before the app
+CMD ["node", "--require", "./dist/instrumentation.js", "dist/server.js"]

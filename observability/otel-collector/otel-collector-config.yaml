@@ -24,6 +24,9 @@ exporters:
   debug:
     verbosity: basic
 
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
+
 service:
   pipelines:
     traces:
@@ -34,3 +37,7 @@ service:
       receivers: [otlp]
       processors: [batch]
       exporters: [prometheus, debug]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp/loki, debug]
