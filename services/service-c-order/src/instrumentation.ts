@@ -14,6 +14,7 @@ import { PrometheusExporter } from '@opentelemetry/exporter-prometheus';
 import { HostMetrics } from '@opentelemetry/host-metrics';
 import { HttpInstrumentation } from '@opentelemetry/instrumentation-http';
 import { ExpressInstrumentation } from '@opentelemetry/instrumentation-express';
+import { UndiciInstrumentation } from '@opentelemetry/instrumentation-undici';
 import { PinoInstrumentation } from '@opentelemetry/instrumentation-pino';
 import { RuntimeNodeInstrumentation } from '@opentelemetry/instrumentation-runtime-node';
 
@@ -44,6 +45,9 @@ const sdk = new NodeSDK({
   instrumentations: [
     new HttpInstrumentation(),
     new ExpressInstrumentation(),
+    // fetch() (undici) : crée un span client et ajoute l'en-tête W3C traceparent
+    // aux appels vers A, B et D -> une seule trace de bout en bout
+    new UndiciInstrumentation(),
     new PinoInstrumentation(),
     new RuntimeNodeInstrumentation(), // USE : boucle d'événements, mémoire V8
   ],
