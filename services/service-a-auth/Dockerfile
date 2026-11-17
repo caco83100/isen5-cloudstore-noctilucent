@@ -13,6 +13,7 @@ FROM node:24-alpine AS runner
 
 WORKDIR /app
 ENV NODE_ENV=production
+ENV OTEL_NODE_RESOURCE_DETECTORS="host,process,os" 
 
 COPY package.json ./
 RUN npm install --omit=dev
@@ -21,4 +22,4 @@ COPY --from=builder /app/dist ./dist
 
 EXPOSE 8081
 
-CMD ["node", "dist/server.js"]
+CMD ["node", "--import", "./dist/instrumentation.js", "dist/server.js"]
