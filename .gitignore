@@ -1,0 +1,9 @@
+# Dependencies (reinstalled by `npm install` / the Dockerfile)
+node_modules/
+
+# TypeScript build output (rebuilt by `npm run build` / the Dockerfile)
+dist/
+
+# Local environment & logs
+.env
+*.log
