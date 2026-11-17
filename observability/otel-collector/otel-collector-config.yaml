@@ -21,6 +21,12 @@ exporters:
     endpoint: 0.0.0.0:8889
     namespace: otel
 
+  # Loki 3.x natively ingests OTLP logs on /otlp
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
+    tls:
+      insecure: true
+
   debug:
     verbosity: basic
 
@@ -34,3 +40,7 @@ service:
       receivers: [otlp]
       processors: [batch]
       exporters: [prometheus, debug]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp/loki, debug]

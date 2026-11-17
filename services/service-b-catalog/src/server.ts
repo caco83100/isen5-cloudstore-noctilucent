@@ -1,3 +1,4 @@
+import { prometheusExporter } from './instrumentation';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import {
@@ -8,6 +9,11 @@ import {
   ReleaseResponse,
   ErrorResponse,
 } from './types';
+import { getProducts } from './routes/getProducts';
+import { reserveInventory } from './routes/reserveInventory';
+import { releaseInventory } from './routes/releaseInventory';
+import { metricsMiddleware } from './midlewares/metrics';
+import { logInfo, logError } from './midlewares/logger';
 
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 8082;
@@ -15,6 +21,7 @@ const SERVICE_NAME = 'service-b-catalog';
 
 app.use(cors());
 app.use(express.json());
+app.use(metricsMiddleware);
 
 // Operational health probe
 app.get('/healthz', (_req: Request, res: Response) => {
@@ -29,76 +36,64 @@ app.get('/healthz', (_req: Request, res: Response) => {
  * GET /metrics
  * Purpose: Prometheus exposition format endpoint.
  * Skeleton: Returns 501 Not Implemented.
- * TODO [Lab 2]: Install prom-client and implement RED metrics collection (http_requests_total, http_request_duration_seconds).
+ * TODO [Lab 2]: Install OPTel and implement RED metrics collection (http_requests_total, http_request_duration_seconds).
  */
 app.get('/metrics', (_req: Request, res: Response<ErrorResponse>) => {
-  res.status(501).json({
-    error: 'Not Implemented',
-    message: 'GET /metrics is not implemented in this skeleton. Implement Prometheus metrics in Lab 2.',
-    status_code: 501,
-  });
+  prometheusExporter.getMetricsRequestHandler(_req, res);
 });
 
 // ==========================================
-// Service Endpoints (Skeleton - Unimplemented)
+// Service Endpoints
 // ==========================================
 
 /**
  * GET /products
  * Purpose: Returns product list with stock counts.
- * Skeleton: Returns 501 Not Implemented.
  */
 app.get('/products', (_req: Request, res: Response<Product[] | ErrorResponse>) => {
-  // TODO [Before day 2]:
-  // 1. Fetch available products and inventory levels from catalog repository.
-  // 2. Return product list (200 OK).
-  res.status(501).json({
-    error: 'Not Implemented',
-    message: 'GET /products is not implemented in this skeleton. Implement catalog retrieval before day 2.',
-    status_code: 501,
-  });
+  try {
+    const { status, body } = getProducts();
+    res.status(status).json(body);
+  } catch (err) {
+    logError(`Unexpected error: ${err}`);
+    res.status(500).json({ error: 'Internal Server Error', message: String(err), status_code: 500 });
+  }
 });
 
 /**
  * POST /inventory/reserve
- * Purpose: Locks requested items in stock.
- * Skeleton: Returns 501 Not Implemented.
+ * Purpose: Locks requested items in stock (200 with reservation_id, 409 if stock is insufficient).
  */
 app.post(
   '/inventory/reserve',
   (req: Request<{}, {}, ReserveRequest>, res: Response<ReserveResponse | ErrorResponse>) => {
-    // TODO [Before day 2]:
-    // 1. Validate requested items and stock availability.
-    // 2. Atomically acquire lock / reserve items in stock.
-    // 3. Return 200 OK with reservation_id or 409 Conflict if stock is insufficient.
-    res.status(501).json({
-      error: 'Not Implemented',
-      message: 'POST /inventory/reserve is not implemented in this skeleton. Implement stock reservation before day 2.',
-      status_code: 501,
-    });
+    try {
+      const { status, body } = reserveInventory(req.body);
+      res.status(status).json(body);
+    } catch (err) {
+      logError(`Unexpected error: ${err}`);
+      res.status(500).json({ error: 'Internal Server Error', message: String(err), status_code: 500 });
+    }
   }
 );
 
 /**
  * POST /inventory/release
  * Purpose: Releases previously reserved stock on rollback / checkout abort.
- * Skeleton: Returns 501 Not Implemented.
  */
 app.post(
   '/inventory/release',
   (req: Request<{}, {}, ReleaseRequest>, res: Response<ReleaseResponse | ErrorResponse>) => {
-    // TODO [Before day 2]:
-    // 1. Look up reservation by reservation_id.
-    // 2. Release locked items back to stock inventory.
-    // 3. Return 200 OK with confirmation.
-    res.status(501).json({
-      error: 'Not Implemented',
-      message: 'POST /inventory/release is not implemented in this skeleton. Implement stock release before day 2.',
-      status_code: 501,
-    });
+    try {
+      const { status, body } = releaseInventory(req.body);
+      res.status(status).json(body);
+    } catch (err) {
+      logError(`Unexpected error: ${err}`);
+      res.status(500).json({ error: 'Internal Server Error', message: String(err), status_code: 500 });
+    }
   }
 );
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`[${SERVICE_NAME}] listening on port ${PORT}`);
+  logInfo(`Service started on port ${PORT}`);
 });
