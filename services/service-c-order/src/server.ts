@@ -128,10 +128,10 @@ app.post(
 
     logger.info({ order_id, user_id, items_count: items.length }, 'checkout started');
 
-    // Headers W3C à transmettre à chaque appel
+    // Headers communs aux appels sortants.
+    // Le header W3C traceparent n'est PAS copié à la main : UndiciInstrumentation
+    // (instrumentation.ts) l'ajoute à chaque fetch() avec le span courant de C.
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    const traceparent = req.header('traceparent');
-    if (traceparent) headers['traceparent'] = traceparent;
 
     // 5. Compensation : rend le stock réservé (POST /inventory/release)
     const release = async (reservation_id: string) => {
