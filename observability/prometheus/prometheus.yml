@@ -16,6 +16,7 @@ scrape_configs:
       - targets: ['service-c:8083']
 
   - job_name: 'service-d-payment'
+    metrics_path: /metrics # On défini le chemin des metrics comme étant /metrics
     static_configs:
       - targets: ['service-d:8084']
 
