@@ -66,6 +66,13 @@ export function generateTraceContext(): { traceId: string; spanId: string; heade
 let counter = 0;
 
 // ==========================================
+// Product IDs (Service B catalog)
+// ==========================================
+// Must match services/service-b-catalog/src/models/catalog.ts
+const IN_STOCK_PRODUCTS = ['p-001', 'p-002', 'p-003', 'p-004'];
+const DEPLETED_PRODUCT = 'p-005'; // stock 0 in the catalog -> 409 Conflict
+
+// ==========================================
 // Authentication (Service A)
 // ==========================================
 // The load generator behaves like a real client: it logs in once through
@@ -155,7 +162,7 @@ export async function executeScenarioStep(
       body = {
         user_id: userId,
         items: [
-          { product_id: `PROD-${(counter % 5) + 1}`, quantity: (counter % 3) + 1 },
+          { product_id: IN_STOCK_PRODUCTS[counter % IN_STOCK_PRODUCTS.length], quantity: (counter % 3) + 1 },
         ],
         payment_method: 'card',
       };
@@ -180,7 +187,7 @@ export async function executeScenarioStep(
       url = `${endpoints.serviceC}/orders/checkout`;
       body = {
         user_id: userId,
-        items: [{ product_id: 'PROD-DEPLETED-999', quantity: 99999 }],
+        items: [{ product_id: DEPLETED_PRODUCT, quantity: 99999 }],
         payment_method: 'card',
       };
       break;

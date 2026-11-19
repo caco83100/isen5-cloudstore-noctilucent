@@ -5,10 +5,13 @@ import { Product, ReservationItem } from '../types';
  * Data is reset every time the service restarts.
  */
 export const products: Product[] = [
-  { id: 'p-001', name: 'Mechanical Keyboard', price_cents: 8999, stock: 25 },
-  { id: 'p-002', name: 'Wireless Mouse', price_cents: 3499, stock: 50 },
-  { id: 'p-003', name: '27" Monitor', price_cents: 24999, stock: 10 },
-  { id: 'p-004', name: 'USB-C Hub', price_cents: 2999, stock: 40 },
+  // Large stock so continuous load-generator traffic does not empty it
+  // (peak ~10 orders/s x 2 units: > 1 hour before running out)
+  { id: 'p-001', name: 'Mechanical Keyboard', price_cents: 8999, stock: 100000 },
+  { id: 'p-002', name: 'Wireless Mouse', price_cents: 3499, stock: 100000 },
+  { id: 'p-003', name: '27" Monitor', price_cents: 24999, stock: 100000 },
+  { id: 'p-004', name: 'USB-C Hub', price_cents: 2999, stock: 100000 },
+  // Intentionally out of stock: used by the "Out-of-Stock (409)" scenario
   { id: 'p-005', name: 'Noise Cancelling Headphones', price_cents: 19999, stock: 0 },
 ];
 
