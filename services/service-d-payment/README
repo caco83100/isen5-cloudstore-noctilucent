@@ -1,3 +1,19 @@
+# Ajout du Dashboard pour les SLO :
+[Objectif] Ajouter un Dashboard pour ce service (qui sera par la suite concaténé avec ceux des autres services) qui permet de clairement désigner les SLO choisi ainsi que de fournir les pannels permettant le suivit des dits SLO.
+[SLO_1] Latence moyenne :
+Latence moyenne observée sans latence simulée : 5 ms max.
+Je conjecture qu'on peut aisément partir sur un SLO de 99,5% < 300ms et donc un SLA de 99,9%.
+[SLO_2] Taux de requêtes traitées avec succès : SLO 99,9% ; SLA 99,5%
+
+Vérifier que le traceparent est bien communiqué via les http headers.
+
+
+
+Pour tout lancer : (ne pas oublier d'ouvrir le docker... (^ᗜ^ᵕ) )
+docker compose up --build -d
+
+
+
 Pour reconstruir le docker
 docker compose up -d --build service-d
 
@@ -7,8 +23,20 @@ Fait gaffe à ce que docker (desktop) soit lancé.
 cd service/service-d-payement
 npm install
 ```
-Pour essayer 
+Pour essayer (oui c'est moche)
 Invoke-RestMethod -Uri "http://localhost:8084/payments/charge" -Method POST -ContentType "application/json" -Body '{"order_id": "order-123","amount_cents": 2500,"idempotency_key": "payment-test-001"}'
+Invoke-RestMethod -Uri "http://localhost:8084/payments/charge" -Method POST -ContentType "application/json" -Body '{"order_id":"order-001","amount_cents":2500,"idempotency_key":"payment-test-011"}'
+Invoke-RestMethod -Uri "http://localhost:8084/payments/charge" -Method POST -ContentType "application/json" -Body '{"order_id":"order-002","amount_cents":500,"idempotency_key":"payment-test-012"}'
+Invoke-RestMethod -Uri "http://localhost:8084/payments/charge" -Method POST -ContentType "application/json" -Body '{"order_id":"order-003","amount_cents":4999,"idempotency_key":"payment-test-013"}'
+Invoke-RestMethod -Uri "http://localhost:8084/payments/charge" -Method POST -ContentType "application/json" -Body '{"order_id":"order-004","amount_cents":15000,"idempotency_key":"payment-test-014"}'
+Invoke-RestMethod -Uri "http://localhost:8084/payments/charge" -Method POST -ContentType "application/json" -Body '{"order_id":"order-005","amount_cents":100,"idempotency_key":"payment-test-015"}'
+Invoke-RestMethod -Uri "http://localhost:8084/payments/charge" -Method POST -ContentType "application/json" -Body '{"order_id":"order-006","amount_cents":25000,"idempotency_key":"payment-test-016"}'
+Invoke-RestMethod -Uri "http://localhost:8084/payments/charge" -Method POST -ContentType "application/json" -Body '{"order_id":"order-007","amount_cents":1250,"idempotency_key":"payment-test-017"}'
+Invoke-RestMethod -Uri "http://localhost:8084/payments/charge" -Method POST -ContentType "application/json" -Body '{"order_id":"order-008","amount_cents":8990,"idempotency_key":"payment-test-018"}'
+Invoke-RestMethod -Uri "http://localhost:8084/payments/charge" -Method POST -ContentType "application/json" -Body '{"order_id":"order-009","amount_cents":49900,"idempotency_key":"payment-test-019"}'
+Invoke-RestMethod -Uri "http://localhost:8084/payments/charge" -Method POST -ContentType "application/json" -Body '{"order_id":"order-010","amount_cents":7500,"idempotency_key":"payment-test-020"}'
 
-Pour accéder au Grafana:
-http://localhost:3000/d/eg4huydzwqj9cf/dashboard-metrics
+
+Pour accéder au Grafana : http://localhost:3000 ; http://localhost:3000/d/eg4huydzwqj9cf/dashboard-metrics
+Pour accéder au Prometheus : http://localhost:9090
+Pour accéder à Jaeger : http://localhost:16686
