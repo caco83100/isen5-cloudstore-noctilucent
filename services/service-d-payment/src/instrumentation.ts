@@ -1,6 +1,8 @@
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-grpc';
+import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-grpc';
+import { BatchLogRecordProcessor } from '@opentelemetry/sdk-logs';
 import { PrometheusExporter } from '@opentelemetry/exporter-prometheus';
 import { resourceFromAttributes } from '@opentelemetry/resources';
 
@@ -14,6 +16,9 @@ const sdk = new NodeSDK({
   }),
   traceExporter: new OTLPTraceExporter(),
   metricReader: prometheusExporter,
+  // Logs -> OTLP gRPC -> otel-collector:4317 -> Loki
+  // (BatchLogRecordProcessor prend un objet { exporter } dans cette version du SDK)
+  logRecordProcessors: [new BatchLogRecordProcessor({ exporter: new OTLPLogExporter() })],
   instrumentations: [getNodeAutoInstrumentations()],
 });
 

@@ -3,6 +3,7 @@ import cors from 'cors';
 import { ChargeRequest, ChargeResponse, ErrorResponse } from './types';
 import { randomUUID } from 'crypto';
 import { trace, SpanStatusCode, metrics } from '@opentelemetry/api'; // Oui j'aurais pu le concaténer avec l'import de metrics mais je préfère garder les choses séparément.
+import { logs, SeverityNumber } from '@opentelemetry/api-logs';
 
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 8084;
@@ -16,6 +17,15 @@ const tracer = trace.getTracer(SERVICE_NAME); // Avec ça je vais pouvoir créer
 // Début de ma fonciton pour les logs.
 // ===================================
 type LogLevel = 'info' | 'warn' | 'error';
+
+// Logger OpenTelemetry : les logs émis ici partent au Collector puis dans Loki.
+const otelLogger = logs.getLogger(SERVICE_NAME);
+const SEVERITY: Record<LogLevel, SeverityNumber> = {
+  info: SeverityNumber.INFO,
+  warn: SeverityNumber.WARN,
+  error: SeverityNumber.ERROR,
+};
+
 function log(
   level: LogLevel,
   message: string,
@@ -34,6 +44,15 @@ function log(
   };
 
   console.log(JSON.stringify(logEntry));
+
+  // Même log envoyé à Loki. Le SDK y attache tout seul le trace_id / span_id
+  // du span actif -> lien "View trace in Jaeger" dans Grafana.
+  otelLogger.emit({
+    severityNumber: SEVERITY[level],
+    severityText: level.toUpperCase(),
+    body: message,
+    attributes, // order_id, payment_status... deviennent des champs filtrables dans Loki
+  });
 }
 // =================================
 // Fin de ma fonciton pour les logs.
