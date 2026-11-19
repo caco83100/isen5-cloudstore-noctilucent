@@ -2,7 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { CheckoutRequest, CheckoutResponse, ErrorResponse } from './types';
 import pino from 'pino';
-import { trace, metrics } from '@opentelemetry/api';
+import { trace, metrics, SpanStatusCode } from '@opentelemetry/api';
 import { logs, SeverityNumber } from '@opentelemetry/api-logs';
 import { prometheusExporter } from './instrumentation';
 
@@ -69,6 +69,9 @@ const logger = pino({
 // (HostMetrics + RuntimeNodeInstrumentation).
 
 const meter = metrics.getMeter(SERVICE_NAME, '1.0.0');
+
+// Spans internes (cascade Jaeger)
+const tracer = trace.getTracer(SERVICE_NAME, '1.0.0');
 
 // R and E: counts every request, split by method, route and status code
 // (l'exporter Prometheus ajoute "_total" -> http_requests_total)
@@ -211,15 +214,30 @@ app.post(
       // Montant à payer : prix récupérés via GET /products (Service B)
       const productsResp = await fetch(`${CATALOG_SERVICE_URL}/products`, { headers });
       const products: { id: string; price_cents: number }[] = await productsResp.json().catch(() => []);
-      let total_cents = 0;
-      for (const item of items) {
-        const product = Array.isArray(products) ? products.find((p) => p.id === item.product_id) : undefined;
-        if (!product) {
-          await release(reservation_id);
-          return fail(502, `Price not found for ${item.product_id}`);
+
+      // Span interne "checkout.compute_total" : calcul du montant dans C
+      // (visible dans la cascade Jaeger entre l'appel à B et l'appel à D).
+      const pricing = tracer.startActiveSpan('checkout.compute_total', (span) => {
+        let total = 0;
+        for (const item of items) {
+          const product = Array.isArray(products) ? products.find((p) => p.id === item.product_id) : undefined;
+          if (!product) {
+            span.addEvent('price.not_found', { product_id: item.product_id });
+            span.setStatus({ code: SpanStatusCode.ERROR, message: `Price not found for ${item.product_id}` });
+            span.end();
+            return { missing: item.product_id };
+          }
+          total += product.price_cents * item.quantity;
         }
-        total_cents += product.price_cents * item.quantity;
+        span.setAttributes({ 'app.order.items_count': items.length, 'app.order.total_cents': total });
+        span.end();
+        return { total };
+      });
+      if ('missing' in pricing) {
+        await release(reservation_id);
+        return fail(502, `Price not found for ${pricing.missing}`);
       }
+      const total_cents = pricing.total;
 
       // 4. Call Service D (POST /payments/charge) passing W3C traceparent headers.
       const chargeResp = await fetch(`${PAYMENT_SERVICE_URL}/payments/charge`, {
@@ -249,6 +267,21 @@ app.post(
     }
   }
 );
+
+// Gestionnaire d'erreurs (doit être déclaré APRÈS les routes).
+// express.json() lève une erreur sur un corps mal formé : on répond un 400 en JSON
+// au lieu de la page HTML par défaut d'Express. Toute autre erreur -> 500 en JSON.
+app.use((err: { type?: string; status?: number; message?: string }, _req: Request, res: Response, _next: NextFunction) => {
+  const status = err.status && err.status >= 400 && err.status < 500 ? err.status : 500;
+  const message = err.type === 'entity.parse.failed' ? 'Malformed JSON body' : status < 500 ? err.message ?? 'Bad Request' : 'Unexpected error';
+  if (status >= 500) {
+    trace.getActiveSpan()?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+    logger.error({ status_code: status, reason: message }, 'request rejected by error handler');
+  } else {
+    logger.warn({ status_code: status, reason: message }, 'request rejected by error handler');
+  }
+  res.status(status).json({ error: status < 500 ? 'Bad Request' : 'Internal Server Error', message, status_code: status });
+});
 
 app.listen(PORT, '0.0.0.0', () => {
   logger.info(
