@@ -20,7 +20,15 @@ const sdk = new NodeSDK({
   // Logs -> OTLP gRPC -> otel-collector:4317 -> Loki
   // (BatchLogRecordProcessor prend un objet { exporter } dans cette version du SDK)
   logRecordProcessors: [new BatchLogRecordProcessor({ exporter: new OTLPLogExporter() })],
-  instrumentations: [getNodeAutoInstrumentations()],
+  instrumentations: [
+    getNodeAutoInstrumentations({
+      // Do not trace Prometheus scraping (/metrics, every 5 s) nor Docker
+      // healthchecks (/healthz, every 10 s): Jaeger stays readable.
+      '@opentelemetry/instrumentation-http': {
+        ignoreIncomingRequestHook: (req) => req.url === '/metrics' || req.url === '/healthz',
+      },
+    }),
+  ],
 });
 
 sdk.start();
