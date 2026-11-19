@@ -1,7 +1,9 @@
 import { randomUUID } from 'crypto';
 import { ReserveRequest, ReserveResponse, ReservationItem, RouteResult } from '../types';
 import { findProduct, reservations } from '../models/catalog';
-import { logInfo, logError } from '../midlewares/logger';
+import { logInfo, logWarn } from '../midlewares/logger';
+
+const ROUTE = '/inventory/reserve';
 
 /**
  * Reserves the requested items in stock.
@@ -10,7 +12,7 @@ import { logInfo, logError } from '../midlewares/logger';
 export function reserveInventory(body: ReserveRequest): RouteResult<ReserveResponse> {
   const items = validateItems(body);
   if (!items) {
-    logError('Reserve rejected: invalid request body');
+    logWarn('Reserve rejected: invalid request body', { route: ROUTE, status_code: 400, reason: 'invalid_body' });
     return {
       status: 400,
       body: {
@@ -25,14 +27,27 @@ export function reserveInventory(body: ReserveRequest): RouteResult<ReserveRespo
   for (const item of items) {
     const product = findProduct(item.product_id);
     if (!product) {
-      logError(`Reserve rejected: product ${item.product_id} does not exist`);
+      logWarn(`Reserve rejected: product ${item.product_id} does not exist`, {
+        route: ROUTE,
+        status_code: 404,
+        reason: 'product_not_found',
+        product_id: item.product_id,
+        quantity: item.quantity,
+      });
       return {
         status: 404,
         body: { error: 'Not Found', message: `Product ${item.product_id} does not exist`, status_code: 404 },
       };
     }
     if (product.stock < item.quantity) {
-      logError(`Reserve rejected: insufficient stock for ${item.product_id} (requested ${item.quantity}, available ${product.stock})`);
+      logWarn(`Reserve rejected: insufficient stock for ${item.product_id}`, {
+        route: ROUTE,
+        status_code: 409,
+        reason: 'insufficient_stock',
+        product_id: item.product_id,
+        quantity: item.quantity,
+        available_stock: product.stock,
+      });
       return {
         status: 409,
         body: {
@@ -52,7 +67,14 @@ export function reserveInventory(body: ReserveRequest): RouteResult<ReserveRespo
 
   const reservation_id = randomUUID();
   reservations.set(reservation_id, items);
-  logInfo(`Stock reserved: ${reservation_id}`);
+  logInfo('Stock reserved', {
+    route: ROUTE,
+    status_code: 200,
+    reservation_id,
+    items_count: items.length,
+    units: items.reduce((sum, i) => sum + i.quantity, 0),
+    product_ids: items.map((i) => i.product_id).join(','),
+  });
 
   return { status: 200, body: { reservation_id, status: 'reserved' } };
 }

@@ -55,7 +55,7 @@ app.get('/products', (_req: Request, res: Response<Product[] | ErrorResponse>) =
     const { status, body } = getProducts();
     res.status(status).json(body);
   } catch (err) {
-    logError(`Unexpected error: ${err}`);
+    logError('Unexpected error', { route: '/products', status_code: 500, error: String(err) });
     res.status(500).json({ error: 'Internal Server Error', message: String(err), status_code: 500 });
   }
 });
@@ -71,7 +71,7 @@ app.post(
       const { status, body } = reserveInventory(req.body);
       res.status(status).json(body);
     } catch (err) {
-      logError(`Unexpected error: ${err}`);
+      logError('Unexpected error', { route: '/inventory/reserve', status_code: 500, error: String(err) });
       res.status(500).json({ error: 'Internal Server Error', message: String(err), status_code: 500 });
     }
   }
@@ -88,12 +88,12 @@ app.post(
       const { status, body } = releaseInventory(req.body);
       res.status(status).json(body);
     } catch (err) {
-      logError(`Unexpected error: ${err}`);
+      logError('Unexpected error', { route: '/inventory/release', status_code: 500, error: String(err) });
       res.status(500).json({ error: 'Internal Server Error', message: String(err), status_code: 500 });
     }
   }
 );
 
 app.listen(PORT, '0.0.0.0', () => {
-  logInfo(`Service started on port ${PORT}`);
+  logInfo('Service started', { port: PORT });
 });

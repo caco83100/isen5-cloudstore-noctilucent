@@ -48,7 +48,9 @@ const sdk = new NodeSDK({
     // fetch() (undici) : crée un span client et ajoute l'en-tête W3C traceparent
     // aux appels vers A, B et D -> une seule trace de bout en bout
     new UndiciInstrumentation(),
-    new PinoInstrumentation(),
+    // Log sending is done in server.ts (pino hook) to get uppercase severity_text.
+    // The instrumentation still injects trace_id / span_id into the console JSON.
+    new PinoInstrumentation({ disableLogSending: true }),
     new RuntimeNodeInstrumentation(), // USE : boucle d'événements, mémoire V8
   ],
 });

@@ -3,6 +3,7 @@ import cors from 'cors';
 import { CheckoutRequest, CheckoutResponse, ErrorResponse } from './types';
 import pino from 'pino';
 import { trace, metrics } from '@opentelemetry/api';
+import { logs, SeverityNumber } from '@opentelemetry/api-logs';
 import { prometheusExporter } from './instrumentation';
 
 const app = express();
@@ -17,9 +18,42 @@ const PAYMENT_SERVICE_URL = process.env.PAYMENT_SERVICE_URL || 'http://service-d
 // ==========================================
 // Structured JSON logs (pino) with trace_id / span_id
 // ==========================================
+// Logs -> Loki: emitted here through the OTel Logs API (pino log sending is
+// disabled in instrumentation.ts) so severity_text is uppercase (INFO / WARN /
+// ERROR) like in services A, B and D. trace_id / span_id are attached by the SDK.
+const otelLogger = logs.getLogger(SERVICE_NAME);
+const PINO_LEVELS: Record<number, [SeverityNumber, string]> = {
+  10: [SeverityNumber.TRACE, 'TRACE'],
+  20: [SeverityNumber.DEBUG, 'DEBUG'],
+  30: [SeverityNumber.INFO, 'INFO'],
+  40: [SeverityNumber.WARN, 'WARN'],
+  50: [SeverityNumber.ERROR, 'ERROR'],
+  60: [SeverityNumber.FATAL, 'FATAL'],
+};
+
+function emitToOtel(level: number, args: unknown[]) {
+  const [first, second] = args;
+  const fields = typeof first === 'object' && first !== null ? (first as Record<string, unknown>) : {};
+  const message = typeof first === 'string' ? first : typeof second === 'string' ? second : '';
+  const attributes: Record<string, string | number | boolean> = {};
+  for (const [key, value] of Object.entries(fields)) {
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') attributes[key] = value;
+    else if (value !== undefined && value !== null) attributes[key] = JSON.stringify(value);
+  }
+  const [severityNumber, severityText] = PINO_LEVELS[level] ?? [SeverityNumber.INFO, 'INFO'];
+  otelLogger.emit({ severityNumber, severityText, body: message, attributes });
+}
+
 const logger = pino({
   base: { service: SERVICE_NAME },
   timestamp: pino.stdTimeFunctions.isoTime,
+  hooks: {
+    // Every logger.info/warn/error call: console (pino) + Loki (OTel)
+    logMethod(args, method, level) {
+      emitToOtel(level, args);
+      return method.apply(this, args);
+    },
+  },
   mixin() {
     const span = trace.getActiveSpan();
     if (!span) return {};
