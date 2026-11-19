@@ -2,8 +2,8 @@ FROM node:24-alpine AS builder
 
 WORKDIR /app
 
-COPY package.json ./
-RUN npm install
+COPY package*.json ./
+RUN npm ci
 
 COPY tsconfig.json ./
 COPY src ./src
@@ -16,8 +16,8 @@ ENV NODE_ENV=production
 ENV OTEL_NODE_RESOURCE_DETECTORS="host,process,os"
 ENV OTEL_EXPORTER_OTLP_PROTOCOL=grpc
 
-COPY package.json ./
-RUN npm install --omit=dev
+COPY package*.json ./
+RUN npm ci --omit=dev
 
 COPY --from=builder /app/dist ./dist
 
