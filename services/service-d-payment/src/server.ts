@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { ChargeRequest, ChargeResponse, ErrorResponse } from './types';
 import { randomUUID } from 'crypto';
@@ -438,6 +438,19 @@ app.post(
     // 3. Return 200 OK with transaction_id and status "SUCCESS" or decline with 402/400.
   }
 );*/
+
+// Gestionnaire d'erreurs (doit être déclaré APRÈS les routes).
+// express.json() lève une erreur sur un corps mal formé : on répond un 400 en JSON
+// au lieu de la page HTML par défaut d'Express. Toute autre erreur -> 500 en JSON.
+app.use((err: { type?: string; status?: number; message?: string }, _req: Request, res: Response, _next: NextFunction) => {
+  const status = err.status && err.status >= 400 && err.status < 500 ? err.status : 500;
+  const message = err.type === 'entity.parse.failed' ? 'Malformed JSON body' : status < 500 ? err.message ?? 'Bad Request' : 'Unexpected error';
+  if (status >= 500) {
+    trace.getActiveSpan()?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+  }
+  log(status >= 500 ? 'error' : 'warn', 'Request rejected by error handler', { reason: message, status_code: status });
+  res.status(status).json({ error: status < 500 ? 'Bad Request' : 'Internal Server Error', message, status_code: status });
+});
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[${SERVICE_NAME}] listening on port ${PORT}`);
