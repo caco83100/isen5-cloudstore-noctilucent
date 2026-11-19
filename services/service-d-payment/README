@@ -1,9 +1,10 @@
 # Ajout du Dashboard pour les SLO :
 [Objectif] Ajouter un Dashboard pour ce service (qui sera par la suite concaténé avec ceux des autres services) qui permet de clairement désigner les SLO choisi ainsi que de fournir les pannels permettant le suivit des dits SLO.
-[SLO_1] Latence moyenne :
-Latence moyenne observée sans latence simulée : 5 ms max.
-Je conjecture qu'on peut aisément partir sur un SLO de 99,5% < 300ms et donc un SLA de 99,9%.
-[SLO_2] Taux de requêtes traitées avec succès : SLO 99,9% ; SLA 99,5%
+Dashboard : observability/grafana/provisioning/dashboards/service-d-overview.json (http://localhost:3000/d/service-d-overview)
+[SLO_1] Disponibilité : % de POST /payments/charge sans erreur 5xx (les 402 = refus métier) : SLO 99,9% ; SLA 99,5%
+[SLO_2] Latence (percentile, pas moyenne) :
+Latence observée sans latence simulée : 5 ms max.
+SLO : 99,5% des paiements < 300ms ; SLA plus souple (ex. 99% < 300ms). Le SLA doit toujours être moins strict que le SLO.
 
 Vérifier que le traceparent est bien communiqué via les http headers.
 

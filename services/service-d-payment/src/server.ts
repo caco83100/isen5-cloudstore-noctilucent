@@ -66,7 +66,8 @@ function log(
 
 
 app.use(cors());
-app.use(express.json());
+// express.json() is registered after the metrics middleware (below), so that
+// requests with invalid JSON (400) are counted in the RED metrics too.
 
 /* J'ai déplacé le healthz en bas */
 
@@ -139,6 +140,8 @@ app.use((req: Request, res: Response, next) => {
 
   next();
 });
+
+app.use(express.json());
 
 /**
  * GET /metrics
