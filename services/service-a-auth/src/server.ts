@@ -24,6 +24,9 @@ const requestDuration = meter.createHistogram('http_request_duration_seconds', {
 app.use(cors());
 app.use(express.json());
 
+// Routes techniques exclues des logs d'accès (voir plus bas)
+const NOISY_ROUTES = new Set(['/metrics', '/healthz']);
+
 // Middleware global pour la collecte des métriques RED
 app.use((req, res, next) => {
   const startTime = process.hrtime();
@@ -35,7 +38,11 @@ app.use((req, res, next) => {
     requestCounter.add(1, attributes);
     requestDuration.record(durationInSeconds, attributes);
 
-    // Log d'accès : un par requête, corrélé à la trace via le contexte actif
+    // Log d'accès : un par requête, corrélé à la trace via le contexte actif.
+    // Pas de log pour les sondes techniques (Prometheus scrape /metrics toutes
+    // les 5 s, Docker appelle /healthz) : elles noieraient les vrais logs.
+    // Elles restent comptées dans les métriques ci-dessus.
+    if (NOISY_ROUTES.has(attributes.route)) return;
     const level = res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info';
     log(level, 'HTTP request completed', {
       'http.method': req.method,
