@@ -13,6 +13,12 @@ const idempotencyStore = new Map<string, ChargeResponse>();
 
 const tracer = trace.getTracer(SERVICE_NAME); // Avec ça je vais pouvoir créer des spans personnalisés.
 
+// ==============================
+// Mes paramètres de simulation :
+// ==============================
+const PAYMENT_LATENCY_MS = 0;//800; // On fixe une latence arbitraire de 800ms.
+const PAYMENT_DECLINE_RATE = 0;//0.1;
+
 // ===================================
 // Début de ma fonciton pour les logs.
 // ===================================
@@ -87,6 +93,7 @@ const httpRequestDuration = meter.createHistogram(
   {
     description: 'Durée des requêtes HTTP',
     unit: 's',
+    advice: { explicitBucketBoundaries: [0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.3, 0.5, 1, 2.5, 5] },
   },
 );
 
@@ -156,10 +163,6 @@ app.get('/healthz', (_req: Request, res: Response) => {
 // ==========================================
 // Service Endpoints (Skeleton - Unimplemented)
 // ==========================================
-
-// Mes paramètres de simulation :
-const PAYMENT_LATENCY_MS = 800; // On fixe une latence arbitraire de 800ms.
-const PAYMENT_DECLINE_RATE = 0.1;
 
 /**
  * POST /payments/charge
