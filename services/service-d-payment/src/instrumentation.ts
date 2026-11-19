@@ -5,6 +5,7 @@ import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-grpc';
 import { BatchLogRecordProcessor } from '@opentelemetry/sdk-logs';
 import { PrometheusExporter } from '@opentelemetry/exporter-prometheus';
 import { resourceFromAttributes } from '@opentelemetry/resources';
+import { HostMetrics } from '@opentelemetry/host-metrics';
 
 export const prometheusExporter = new PrometheusExporter({
   preventServerStart: true,
@@ -24,6 +25,7 @@ const sdk = new NodeSDK({
 
 sdk.start();
 
+new HostMetrics({ name: 'service-d-payment' }).start();
 
 
 /*import { NodeSDK } from '@opentelemetry/sdk-node';

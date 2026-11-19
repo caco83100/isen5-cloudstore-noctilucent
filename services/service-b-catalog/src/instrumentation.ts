@@ -4,6 +4,7 @@ import { PrometheusExporter } from '@opentelemetry/exporter-prometheus';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-grpc';
 import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-grpc';
 import { BatchLogRecordProcessor } from '@opentelemetry/sdk-logs';
+import { HostMetrics } from '@opentelemetry/host-metrics';
 
 // Metrics : pulled by Prometheus on GET /metrics (served by server.ts)
 export const prometheusExporter = new PrometheusExporter({ preventServerStart: true });
@@ -19,3 +20,5 @@ const sdk = new NodeSDK({
 });
 
 sdk.start();
+
+new HostMetrics({ name: 'service-b-catalog' }).start();
