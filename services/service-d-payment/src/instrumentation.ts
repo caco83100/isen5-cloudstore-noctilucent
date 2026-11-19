@@ -33,10 +33,7 @@ const sdk = new NodeSDK({
 
 sdk.start();
 
-// USE: process CPU and memory (process_cpu_utilization, process_memory_usage)
-// for the "USE" row of the dashboard, like services A, B and C.
 new HostMetrics({ name: 'service-d-payment' }).start();
-
 
 
 /*import { NodeSDK } from '@opentelemetry/sdk-node';
