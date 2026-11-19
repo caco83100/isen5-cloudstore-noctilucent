@@ -160,6 +160,13 @@ app.post(
       }
     }
 
+    // 2a. Le client doit fournir son jeton (obtenu via POST /auth/login sur A).
+    // Sans header Authorization, inutile d'appeler A : on refuse tout de suite.
+    const authorization = req.header('authorization');
+    if (!authorization) {
+      return fail(401, 'Missing authorization token');
+    }
+
     logger.info({ order_id, user_id, items_count: items.length }, 'checkout started');
 
     // Headers communs aux appels sortants.
@@ -177,10 +184,10 @@ app.post(
     };
 
     try {
-      // 2. Call Service A (GET /auth/verify) passing W3C traceparent headers.
+      // 2b. Call Service A (GET /auth/verify) with the client's own token.
       const authResp = await fetch(`${AUTH_SERVICE_URL}/auth/verify`, {
         method: 'GET',
-        headers: { ...headers, Authorization: req.header('authorization') ?? `Bearer demo-token-${user_id}` },
+        headers: { ...headers, Authorization: authorization },
       });
       const auth = await authResp.json().catch(() => null);
       if (!authResp.ok || !auth?.valid) {
