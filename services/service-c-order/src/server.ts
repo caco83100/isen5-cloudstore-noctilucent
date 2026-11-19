@@ -202,7 +202,9 @@ app.post(
       });
       const reserve = await reserveResp.json().catch(() => null);
       if (!reserveResp.ok || !reserve?.reservation_id) {
-        return fail(reserveResp.status === 409 ? 409 : 502, reserve?.message ?? 'Inventory reservation failed');
+        // Preserve client-caused catalog errors so they are not counted as checkout server failures.
+        const statusCode = [400, 404, 409].includes(reserveResp.status) ? reserveResp.status : 502;
+        return fail(statusCode, reserve?.message ?? 'Inventory reservation failed');
       }
       const reservation_id: string = reserve.reservation_id;
 
