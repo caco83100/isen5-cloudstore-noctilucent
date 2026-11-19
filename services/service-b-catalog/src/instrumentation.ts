@@ -16,9 +16,20 @@ const sdk = new NodeSDK({
     traceExporter: new OTLPTraceExporter(),
     metricReaders: [prometheusExporter],
     logRecordProcessors: [new BatchLogRecordProcessor({ exporter: new OTLPLogExporter() })],
-    instrumentations: [getNodeAutoInstrumentations()],
+    instrumentations: [
+        getNodeAutoInstrumentations({
+            // Do not trace Prometheus scraping (/metrics, every 5 s) nor Docker
+            // healthchecks (/healthz, every 10 s): Jaeger stays readable.
+            // They are still counted in the RED metrics.
+            '@opentelemetry/instrumentation-http': {
+                ignoreIncomingRequestHook: (req) => req.url === '/metrics' || req.url === '/healthz',
+            },
+        }),
+    ],
 });
 
 sdk.start();
 
+// USE: process CPU and memory (process_cpu_utilization, process_memory_usage)
+// for the "USE" row of the dashboard, like services A and C.
 new HostMetrics({ name: 'service-b-catalog' }).start();

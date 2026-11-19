@@ -43,7 +43,11 @@ const sdk = new NodeSDK({
 
   // Ce qu'on instrumente
   instrumentations: [
-    new HttpInstrumentation(),
+    // ← modifié : on ne trace pas le scraping Prometheus (/metrics, toutes les 5 s)
+    // ni les healthchecks Docker (/healthz, toutes les 10 s) -> Jaeger reste lisible
+    new HttpInstrumentation({
+      ignoreIncomingRequestHook: (req) => req.url === '/metrics' || req.url === '/healthz',
+    }),
     new ExpressInstrumentation(),
     // fetch() (undici) : crée un span client et ajoute l'en-tête W3C traceparent
     // aux appels vers A, B et D -> une seule trace de bout en bout

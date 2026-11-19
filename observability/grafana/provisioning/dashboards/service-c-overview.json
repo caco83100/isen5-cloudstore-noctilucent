@@ -7,7 +7,7 @@
   ],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 2,
+  "version": 3,
   "refresh": "10s",
   "time": {
     "from": "now-30m",
@@ -29,9 +29,9 @@
     },
     {
       "id": 101,
-      "type": "stat",
-      "title": "Disponibilité checkout (SLO 99,5 %)",
-      "description": "% de POST /orders/checkout sans erreur 5xx (les 4xx = erreurs client, non comptées)",
+      "type": "gauge",
+      "title": "SLO 1 - Disponibilité checkout (objectif 99,9 %)",
+      "description": "SLI = % de POST /orders/checkout sans erreur 5xx sur la période. Les 4xx (401 token, 402 paiement refusé, 409 rupture de stock) sont des refus métier normaux, non comptés comme pannes.",
       "gridPos": {
         "x": 0,
         "y": 1,
@@ -54,25 +54,30 @@
                 "value": null
               },
               {
-                "color": "green",
+                "color": "orange",
                 "value": 0.995
+              },
+              {
+                "color": "green",
+                "value": 0.999
               }
             ]
-          }
+          },
+          "min": 0.99,
+          "max": 1
         },
         "overrides": []
       },
       "options": {
-        "colorMode": "background",
-        "graphMode": "area",
-        "textMode": "value",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ],
           "fields": "",
           "values": false
-        }
+        },
+        "showThresholdMarkers": true,
+        "showThresholdLabels": false
       },
       "targets": [
         {
@@ -87,9 +92,9 @@
     },
     {
       "id": 102,
-      "type": "stat",
-      "title": "Latence checkout < 500 ms (SLO 95 %)",
-      "description": "% de checkouts répondus en moins de 500 ms",
+      "type": "gauge",
+      "title": "SLO 2 - Latence checkout < 1 s (objectif 95 %)",
+      "description": "SLI = % de POST /orders/checkout répondus en moins de 1 s. Seuil à 1 s car le paiement (service D) prend ~800 ms par conception.",
       "gridPos": {
         "x": 6,
         "y": 1,
@@ -112,25 +117,30 @@
                 "value": null
               },
               {
+                "color": "orange",
+                "value": 0.9
+              },
+              {
                 "color": "green",
                 "value": 0.95
               }
             ]
-          }
+          },
+          "min": 0.8,
+          "max": 1
         },
         "overrides": []
       },
       "options": {
-        "colorMode": "background",
-        "graphMode": "area",
-        "textMode": "value",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ],
           "fields": "",
           "values": false
-        }
+        },
+        "showThresholdMarkers": true,
+        "showThresholdLabels": false
       },
       "targets": [
         {
@@ -139,7 +149,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(rate(http_request_duration_seconds_bucket{job=\"service-c-order\", route=\"/orders/checkout\", le=\"0.5\"}[$__range])) / sum(rate(http_request_duration_seconds_count{job=\"service-c-order\", route=\"/orders/checkout\"}[$__range]))"
+          "expr": "sum(rate(http_request_duration_seconds_bucket{job=\"service-c-order\", route=\"/orders/checkout\", le=\"1\"}[$__range])) / sum(rate(http_request_duration_seconds_count{job=\"service-c-order\", route=\"/orders/checkout\"}[$__range]))"
         }
       ]
     },
@@ -147,7 +157,7 @@
       "id": 103,
       "type": "stat",
       "title": "Budget d'erreur restant",
-      "description": "Part du 0,5 % d'échecs autorisés qui n'a pas encore été consommée",
+      "description": "Part du 0,1 % d'échecs (5xx) autorisés par le SLO 1 qui n'est pas encore consommée",
       "gridPos": {
         "x": 12,
         "y": 1,
@@ -201,14 +211,14 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "1 - (1 - (sum(rate(http_requests_total{job=\"service-c-order\", route=\"/orders/checkout\", status_code!~\"5..\"}[$__range])) / sum(rate(http_requests_total{job=\"service-c-order\", route=\"/orders/checkout\"}[$__range])))) / (1 - 0.995)"
+          "expr": "1 - (1 - (sum(rate(http_requests_total{job=\"service-c-order\", route=\"/orders/checkout\", status_code!~\"5..\"}[$__range])) / sum(rate(http_requests_total{job=\"service-c-order\", route=\"/orders/checkout\"}[$__range])))) / (1 - 0.999)"
         }
       ]
     },
     {
       "id": 104,
       "type": "stat",
-      "title": "Trafic total",
+      "title": "Trafic checkout",
       "description": "",
       "gridPos": {
         "x": 18,
@@ -255,7 +265,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(rate(http_requests_total{job=\"service-c-order\"}[5m]))"
+          "expr": "sum(rate(http_requests_total{job=\"service-c-order\", route=\"/orders/checkout\"}[5m]))"
         }
       ]
     },
@@ -339,7 +349,7 @@
     {
       "id": 3,
       "type": "timeseries",
-      "title": "Duration - p95 de la latence",
+      "title": "Duration - p95 de la latence (checkout)",
       "gridPos": {
         "x": 16,
         "y": 7,
@@ -352,7 +362,25 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "s"
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "custom": {
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          }
         },
         "overrides": []
       },
@@ -363,7 +391,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job=\"service-c-order\"}[1m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job=\"service-c-order\", route=\"/orders/checkout\"}[1m])))",
           "legendFormat": "p95"
         }
       ]
@@ -403,7 +431,7 @@
     {
       "id": 5,
       "type": "table",
-      "title": "Traces récentes (cliquer sur un Trace ID)",
+      "title": "Traces des checkouts (cliquer sur un Trace ID)",
       "gridPos": {
         "x": 12,
         "y": 15,
@@ -423,7 +451,8 @@
           },
           "queryType": "search",
           "service": "service-c-order",
-          "limit": 20
+          "limit": 20,
+          "operation": "POST /orders/checkout"
         }
       ]
     },

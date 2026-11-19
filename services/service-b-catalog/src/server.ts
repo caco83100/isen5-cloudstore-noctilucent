@@ -19,9 +19,11 @@ const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 8082;
 const SERVICE_NAME = 'service-b-catalog';
 
+// Metrics first: requests rejected by express.json() (invalid JSON -> 400)
+// are counted too, otherwise they would be invisible on the dashboard.
+app.use(metricsMiddleware);
 app.use(cors());
 app.use(express.json());
-app.use(metricsMiddleware);
 
 // Operational health probe
 app.get('/healthz', (_req: Request, res: Response) => {
